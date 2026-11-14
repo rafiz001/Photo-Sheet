@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Photo Sheet · 4-up A4 · Print ready</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pw: 3.5cm;          /* photo footprint width  (includes border) */
+    --ph: 4.5cm;          /* photo footprint height (includes border) */
+    --bw: 0mm;            /* border width */
+    --bc: #ffffff;        /* border colour */
+    --gap: 1mm;           /* gap between photos */
+  }
+
+  html, body { height: 100%; }
+  body{
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: #fff8e0;
+    color: #1f1f1f;
+  }
+  *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .font-editorial{
+    font-family: "PP Editorial Old", "Times New Roman", Georgia, serif;
+  }
+
+  /* ---------------- A4 sheet ---------------- */
+  .a4{
+    width: 210mm;
+    height: 297mm;
+    padding: 5mm;                 /* bare-minimum printer-safe margin */
+    background: #fff;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* ---------------- photo cell ---------------- */
+  .photo{
+    width: var(--pw);
+    height: var(--ph);
+    position: relative;
+    overflow: hidden;
+    flex: none;
+    background: #eef2f7;
+    box-sizing: border-box;
+  }
+  .photo img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;            /* crop-to-fill, never stretch */
+    display: block;
+  }
+  /* border drawn INSIDE the footprint, on top of the image */
+  .photo::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 var(--bw) var(--bc);
+    pointer-events: none;
+  }
+  /* border OUTSIDE the image, still within the same footprint */
+  #photoGrid.border-outside .photo{
+    padding: var(--bw);
+    background: var(--bc);
+  }
+  #photoGrid.border-outside .photo::after{ display: none; }
+
+  /* ---------------- grid: 1×4 / 2×2, 1mm gap ---------------- */
+  #photoGrid{
+    display: grid;
+    gap: var(--gap);
+    grid-template-columns: var(--pw) var(--pw) var(--pw) var(--pw);
+    align-content: start;
+  }
+  #photoGrid.grid-2x2{
+    grid-template-columns: var(--pw) var(--pw);
+  }
+
+  /* ---------------- pill tabs ---------------- */
+  .pill-tab{
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #6a6a6a;
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 9999px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .pill-tab:hover{ color: #1f1f1f; border-color: #c7c7c7; }
+  .pill-tab.active{
+    background: #1f1f1f;
+    color: #fff;
+    border-color: #1f1f1f;
+  }
+
+  /* ---------------- form fields ---------------- */
+  .field{
+    width: 100%;
+    height: 44px;
+    border: 1px solid #c7c7c7;
+    border-radius: 8px;
+    padding: 0 12px;
+    background: #fff;
+    font-size: 14px;
+    color: #1f1f1f;
+    outline: none;
+  }
+  .field:focus{
+    border: 2px solid #fa520f;
+    padding: 0 11px;
+  }
+
+  /* ---------------- preview scaling ---------------- */
+  #pageScaler{ transform-origin: top center; }
+
+  /* ---------------- signature sunset stripe ---------------- */
+  .sunset-stripe{
+    height: 14px;
+    background: linear-gradient(
+      90deg,
+      #fa520f 0%,
+      #ff8105 22%,
+      #ffb83e 48%,
+      #ffd900 72%,
+      #fff8e0 100%
+    );
+  }
+
+  /* ---------------- print ---------------- */
+  @page{ size: A4 portrait; margin: 0; }
+
+  @media print{
+    html, body{ height: auto !important; background: #fff !important; }
+    .no-print{ display: none !important; }
+
+    #main{
+      margin: 0 !important;
+      padding: 0 !important;
+      max-width: none !important;
+    }
+
+    #previewWrap{
+      height: auto !important;
+      overflow: visible !important;
+      display: block !important;
+      background: #fff !important;
+      padding: 0 !important;
+    }
+    #pageScaler{ transform: none !important; }
+
+    #a4page{
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      height: 296.5mm !important;   /* 0.5mm safety → never spills to page 2 */
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+  }
+</style>
+</head>
+
+<body class="min-h-screen">
+
+<!-- ══════════════════════ TOP NAV ══════════════════════ -->
+<header class="no-print sticky top-0 z-30 border-b border-[#ededed] bg-white/95 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+
+    <!-- brand mark -->
+    <div class="grid h-9 w-9 place-items-center rounded-lg bg-[#fa520f] text-white shadow-[0_4px_12px_rgba(250,82,15,0.35)]">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <path d="m21 15-5-5L5 21"/>
+      </svg>
+    </div>
+
+    <div class="mr-auto">
+      <h1 class="font-editorial text-[20px] leading-none tracking-[-0.5px] text-[#1f1f1f]">Photo Sheet</h1>
+      <p class="mt-1 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">
+        4-up · A4 · print ready
+      </p>
+    </div>
+
+    <!-- actions -->
+    <button id="configBtn"
+      class="inline-flex items-center gap-1.5 rounded-lg border border-[#c7c7c7] bg-white px-3.5 py-2 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#fafafa]">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      Sizes
+    </button>
+
+    <button id="printBtn"
+      class="inline-flex items-center gap-1.5 rounded-lg bg-[#fa520f] px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(250,82,15,0.3)] transition hover:bg-[#cc3a05]">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 9V2h12v7"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Print
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main id="main" class="mx-auto max-w-6xl px-4 py-6">
+
+  <!-- controls card -->
+  <section class="no-print mb-5 rounded-xl border border-[#ededed] bg-white p-4 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+    <div class="flex flex-wrap items-end gap-x-7 gap-y-4">
+
+      <!-- photo size -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Photo size</p>
+        <div id="sizeGroup" class="inline-flex gap-1.5">
+          <button class="pill-tab active" data-val="passport">
+            Passport <span data-dim="passport">3.5×4.5</span>
+          </button>
+          <button class="pill-tab" data-val="stamp">
+            Stamp <span data-dim="stamp">2×2.5</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- border width -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border width</p>
+        <div id="borderGroup" class="inline-flex gap-1.5">
+          <button class="pill-tab active" data-val="0">None</button>
+          <button class="pill-tab" data-val="0.5">0.5 mm</button>
+          <button class="pill-tab" data-val="1">1 mm</button>
+        </div>
+      </div>
+
+      <!-- border position -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border position</p>
+        <div id="posGroup" class="inline-flex gap-1.5">
+          <button class="pill-tab active" data-val="inside">Inside</button>
+          <button class="pill-tab" data-val="outside">Outside</button>
+        </div>
+      </div>
+
+      <!-- border colour -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border colour</p>
+        <label class="flex h-[34px] w-[46px] cursor-pointer items-center justify-center rounded-lg border border-[#c7c7c7] bg-white">
+          <input id="borderColor" type="color" value="#ffffff" title="Border colour"
+                 class="h-6 w-8 cursor-pointer border-0 bg-transparent p-0" />
+        </label>
+      </div>
+
+      <!-- layout -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Layout</p>
+        <div id="layoutGroup" class="inline-flex gap-1.5">
+          <button class="pill-tab active" data-val="row">1 × 4</button>
+          <button class="pill-tab" data-val="grid">2 × 2</button>
+        </div>
+      </div>
+
+      <!-- misc -->
+      <div class="ml-auto flex items-center gap-3">
+        <span class="hidden text-[11px] text-[#8a8a8a] sm:inline">1 mm gap between photos</span>
+        <button id="clearBtn"
+          class="rounded-lg border border-[#c7c7c7] bg-white px-3 py-2 text-[13px] font-medium text-[#4a4a4a] transition hover:bg-[#fafafa]">
+          Clear
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- paste / drop zone -->
+  <div id="dropZone"
+       class="no-print mb-5 cursor-pointer rounded-xl border border-dashed border-[#e6d5a8] bg-[#fff8e0] px-4 py-3 text-center transition hover:border-[#fa520f] hover:bg-[#fffaeb]">
+    <p class="text-[13px] text-[#3d3d3d]">
+      <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">Ctrl</kbd>
+      +
+      <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">V</kbd>
+      to paste &nbsp;·&nbsp; drop an image &nbsp;·&nbsp; or click to browse
+    </p>
+    <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No image yet.</p>
+  </div>
+
+  <!-- A4 preview -->
+  <div id="previewWrap" class="flex justify-center overflow-hidden pb-2">
+    <div id="pageScaler">
+      <div id="a4page" class="a4 rounded-sm shadow-[0_12px_24px_-4px_rgba(0,0,0,0.18)]">
+        <div id="photoGrid">
+          <div class="photo"><img alt="Photo 1"></div>
+          <div class="photo"><img alt="Photo 2"></div>
+          <div class="photo"><img alt="Photo 3"></div>
+          <div class="photo"><img alt="Photo 4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="no-print mt-3 text-center text-[11px] leading-relaxed text-[#8a8a8a]">
+    In the print dialog set <b class="text-[#3d3d3d]">Margins → None</b>,
+    <b class="text-[#3d3d3d]">Scale → 100 %</b> and disable “Fit to page”.
+    Outside borders stay inside the photo footprint.
+  </p>
+
+</main>
+
+<!-- ══════════════════════ SIGNATURE SUNSET STRIPE ══════════════════════ -->
+<div class="no-print sunset-stripe"></div>
+
+<!-- footer -->
+<footer class="no-print bg-[#fff8e0] px-6 py-6 text-center">
+  <p class="text-[11px] text-[#8a8a8a]">
+    Photo Sheet · 4-up A4 · sizes are saved in this browser
+  </p>
+</footer>
+
+<!-- ══════════════════════ CONFIG MODAL ══════════════════════ -->
+<div id="configModal" class="no-print fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-[#1f1f1f]/45" data-close></div>
+
+  <div class="relative mx-auto mt-[8vh] max-h-[84vh] w-[92%] max-w-[460px] overflow-y-auto rounded-xl border border-[#e6d5a8] bg-[#fff8e0] p-7 shadow-[0_16px_48px_-8px_rgba(0,0,0,0.25)]">
+
+    <p class="text-[11px] font-semibold uppercase tracking-[1px] text-[#fa520f]">Configuration</p>
+    <h2 class="font-editorial mt-1 text-[28px] leading-tight tracking-[-0.5px] text-[#1f1f1f]">Photo sizes</h2>
+    <p class="mt-1 text-[13px] text-[#6a6a6a]">
+      Saved to this browser. The footprint includes the border.
+    </p>
+
+    <div class="mt-5 grid grid-cols-2 gap-4">
+      <label class="block">
+        <span class="mb-1 block text-[12px] font-medium text-[#4a4a4a]">Passport width (cm)</span>
+        <input id="cfgPassportW" class="field" type="number" step="0.1" min="1" max="10" value="3.5" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[12px] font-medium text-[#4a4a4a]">Passport height (cm)</span>
+        <input id="cfgPassportH" class="field" type="number" step="0.1" min="1" max="10" value="4.5" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[12px] font-medium text-[#4a4a4a]">Stamp width (cm)</span>
+        <input id="cfgStampW" class="field" type="number" step="0.1" min="1" max="10" value="2" />
+      </label>
+      <label class="block">
+        <span class="mb-1 block text-[12px] font-medium text-[#4a4a4a]">Stamp height (cm)</span>
+        <input id="cfgStampH" class="field" type="number" step="0.1" min="1" max="10" value="2.5" />
+      </label>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-2">
+      <button id="cfgReset"
+        class="rounded-lg border border-[#c7c7c7] bg-white px-3 py-2 text-[13px] font-medium text-[#4a4a4a] transition hover:bg-[#fafafa]">
+        Reset defaults
+      </button>
+      <div class="flex gap-2">
+        <button data-close
+          class="rounded-lg border border-[#c7c7c7] bg-white px-3.5 py-2 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#fafafa]">
+          Cancel
+        </button>
+        <button id="cfgSave"
+          class="rounded-lg bg-[#1f1f1f] px-4 py-2 text-[13px] font-medium text-white transition hover:bg-[#2c2c2c]">
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" class="hidden" />
+
+<!-- ══════════════════════ SCRIPT ══════════════════════ -->
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     Constants & element refs
+     ========================================================= */
+  const DEFAULTS = { passport: { w: 3.5, h: 4.5 }, stamp: { w: 2, h: 2.5 } };
+  const LS_KEY   = "photoSheet.sizes.v1";
+
+  const pageEl   = document.getElementById("a4page");
+  const scaler   = document.getElementById("pageScaler");
+  const wrap     = document.getElementById("previewWrap");
+  const grid     = document.getElementById("photoGrid");
+  const imgs     = Array.from(document.querySelectorAll(".photo img"));
+  const fileIn   = document.getElementById("fileInput");
+  const dropZone = document.getElementById("dropZone");
+  const info     = document.getElementById("imgInfo");
+  const modal    = document.getElementById("configModal");
+
+  /* =========================================================
+     State
+     ========================================================= */
+  let sizes     = loadSizes();
+  let mode      = "passport";     // 'passport' | 'stamp'
+  let borderW   = 0;              // mm: 0 | 0.5 | 1
+  let borderPos = "inside";       // 'inside' | 'outside'
+  let srcW = 0, srcH = 0;         // natural image size
+  let objectURL = null;
+
+  /* =========================================================
+     Persistence (localStorage)
+     ========================================================= */
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function loadSizes() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return clone(DEFAULTS);
+      const p = JSON.parse(raw);
+      const ok = v => typeof v === "number" && isFinite(v) && v >= 1 && v <= 10;
+      return {
+        passport: {
+          w: ok(p && p.passport && p.passport.w) ? p.passport.w : DEFAULTS.passport.w,
+          h: ok(p && p.passport && p.passport.h) ? p.passport.h : DEFAULTS.passport.h
+        },
+        stamp: {
+          w: ok(p && p.stamp && p.stamp.w) ? p.stamp.w : DEFAULTS.stamp.w,
+          h: ok(p && p.stamp && p.stamp.h) ? p.stamp.h : DEFAULTS.stamp.h
+        }
+      };
+    } catch (e) {
+      return clone(DEFAULTS);
+    }
+  }
+
+  function persist() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(sizes)); } catch (e) {}
+  }
+
+  /* =========================================================
+     Preview scaling
+     ========================================================= */
+  function fitPreview() {
+    const avail = wrap.clientWidth;
+    const w = pageEl.offsetWidth;
+    const h = pageEl.offsetHeight;
+    const scale = Math.min(1, avail / w);
+    scaler.style.transform = "scale(" + scale + ")";
+    wrap.style.height = Math.round(h * scale) + "px";
+  }
+
+  window.addEventListener("resize", fitPreview);
+
+  /* =========================================================
+     Apply sizes / border / layout
+     ========================================================= */
+  function fmt(n) { return String(Math.round(n * 10) / 10); }
+
+  function applySizes() {
+    const s = sizes[mode];
+    const r = document.documentElement.style;
+    r.setProperty("--pw", s.w + "cm");
+    r.setProperty("--ph", s.h + "cm");
+
+    document.querySelectorAll("[data-dim]").forEach(function (el) {
+      const k = el.dataset.dim;
+      el.textContent = fmt(sizes[k].w) + "×" + fmt(sizes[k].h);
+    });
+
+    updateQuality();
+    fitPreview();
+  }
+
+  function applyBorder() {
+    document.documentElement.style.setProperty("--bw", borderW + "mm");
+    grid.classList.toggle("border-outside", borderPos === "outside");
+  }
+
+  /* =========================================================
+     Segmented pill groups
+     ========================================================= */
+  function wireGroup(id, onPick) {
+    const g = document.getElementById(id);
+    g.addEventListener("click", function (e) {
+      const btn = e.target.closest("button[data-val]");
+      if (!btn || !g.contains(btn)) return;
+      g.querySelectorAll("button[data-val]").forEach(function (b) {
+        b.classList.toggle("active", b === btn);
+      });
+      onPick(btn.dataset.val);
+    });
+  }
+
+  wireGroup("sizeGroup",   v => { mode = v; applySizes(); });
+  wireGroup("borderGroup", v => { borderW = parseFloat(v); applyBorder(); });
+  wireGroup("posGroup",    v => { borderPos = v; applyBorder(); });
+  wireGroup("layoutGroup", v => {
+    grid.classList.toggle("grid-2x2", v === "grid");
+    fitPreview();
+  });
+
+  /* border colour */
+  document.getElementById("borderColor").addEventListener("input", function (e) {
+    document.documentElement.style.setProperty("--bc", e.target.value);
+  });
+
+  /* =========================================================
+     Image loading: paste · drop · browse
+     ========================================================= */
+  function handleFile(file) {
+    if (!file || file.type.indexOf("image/") !== 0) return;
+
+    const url = URL.createObjectURL(file);
+
+    // probe natural size for the DPI quality hint
+    const probe = new Image();
+    probe.onload = function () {
+      srcW = probe.naturalWidth;
+      srcH = probe.naturalHeight;
+      updateQuality();
+    };
+    probe.src = url;
+
+    if (objectURL) URL.revokeObjectURL(objectURL);
+    objectURL = url;
+
+    imgs.forEach(function (im) { im.src = url; });
+    fileIn.value = "";
+  }
+
+  function clearImage() {
+    imgs.forEach(function (im) { im.removeAttribute("src"); });
+    if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
+    srcW = 0; srcH = 0;
+    info.textContent = "No image yet.";
+    fileIn.value = "";
+  }
+
+  function updateQuality() {
+    if (!srcW || !srcH) {
+      info.textContent = "No image yet.";
+      return;
+    }
+    const s = sizes[mode];
+    const needW = Math.ceil(s.w / 2.54 * 300);   // px needed @300 DPI
+    const needH = Math.ceil(s.h / 2.54 * 300);
+    const ok = srcW >= needW && srcH >= needH;
+
+    info.innerHTML =
+      '<span style="color:#6a6a6a">Source ' + srcW + " × " + srcH + " px</span>" +
+      ' <span style="color:#a8a8a8">·</span> ' +
+      (ok
+        ? '<span style="color:#1f1f1f">good for 300 DPI print</span>'
+        : '<span style="color:#cc3a05">low for 300 DPI — may look soft</span>');
+  }
+
+  /* paste (Ctrl / Cmd + V) */
+  document.addEventListener("paste", function (e) {
+    const dt = e.clipboardData;
+    if (!dt) return;
+
+    if (dt.items) {
+      for (let i = 0; i < dt.items.length; i++) {
+        const it = dt.items[i];
+        if (it.kind === "file" && it.type.indexOf("image/") === 0) {
+          const f = it.getAsFile();
+          if (f) { e.preventDefault(); handleFile(f); return; }
+        }
+      }
+    }
+    if (dt.files && dt.files.length) {
+      for (let i = 0; i < dt.files.length; i++) {
+        if (dt.files[i].type.indexOf("image/") === 0) {
+          e.preventDefault(); handleFile(dt.files[i]); return;
+        }
+      }
+    }
+  });
+
+  /* browse */
+  dropZone.addEventListener("click", function () { fileIn.click(); });
+  fileIn.addEventListener("change", function (e) {
+    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  /* drag & drop */
+  ["dragenter", "dragover"].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.add("border-[#fa520f]", "bg-[#fffaeb]");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    dropZone.addEventListener(ev, function (e) {
+      e.preventDefault();
+      dropZone.classList.remove("border-[#fa520f]", "bg-[#fffaeb]");
+    });
+  });
+  dropZone.addEventListener("drop", function (e) {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  // never let a stray drop navigate away
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop",     function (e) { e.preventDefault(); });
+
+  /* =========================================================
+     Clear / Print
+     ========================================================= */
+  document.getElementById("clearBtn").addEventListener("click", clearImage);
+  document.getElementById("printBtn").addEventListener("click", function () { window.print(); });
+
+  /* =========================================================
+     Config modal
+     ========================================================= */
+  const cfg = {
+    pw: document.getElementById("cfgPassportW"),
+    ph: document.getElementById("cfgPassportH"),
+    sw: document.getElementById("cfgStampW"),
+    sh: document.getElementById("cfgStampH")
+  };
+
+  function openModal() {
+    cfg.pw.value = fmt(sizes.passport.w);
+    cfg.ph.value = fmt(sizes.passport.h);
+    cfg.sw.value = fmt(sizes.stamp.w);
+    cfg.sh.value = fmt(sizes.stamp.h);
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+    setTimeout(function () { cfg.pw.focus(); }, 30);
+  }
+
+  function closeModal() {
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+    fitPreview();
+  }
+
+  function readNum(el, fallback) {
+    const v = parseFloat(el.value);
+    if (!isFinite(v)) return fallback;
+    return Math.min(10, Math.max(1, Math.round(v * 10) / 10));
+  }
+
+  document.getElementById("configBtn").addEventListener("click", openModal);
+
+  document.getElementById("cfgSave").addEventListener("click", function () {
+    sizes = {
+      passport: {
+        w: readNum(cfg.pw, DEFAULTS.passport.w),
+        h: readNum(cfg.ph, DEFAULTS.passport.h)
+      },
+      stamp: {
+        w: readNum(cfg.sw, DEFAULTS.stamp.w),
+        h: readNum(cfg.sh, DEFAULTS.stamp.h)
+      }
+    };
+    persist();
+    applySizes();
+    closeModal();
+  });
+
+  document.getElementById("cfgReset").addEventListener("click", function () {
+    cfg.pw.value = fmt(DEFAULTS.passport.w);
+    cfg.ph.value = fmt(DEFAULTS.passport.h);
+    cfg.sw.value = fmt(DEFAULTS.stamp.w);
+    cfg.sh.value = fmt(DEFAULTS.stamp.h);
+  });
+
+  modal.querySelectorAll("[data-close]").forEach(function (el) {
+    el.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+  });
+
+  /* =========================================================
+     Boot
+     ========================================================= */
+  applyBorder();
+  applySizes();
+  updateQuality();
+  requestAnimationFrame(fitPreview);
+
+})();
+</script>
+</body>
+</html>
