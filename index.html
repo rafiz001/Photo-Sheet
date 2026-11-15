@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Photo Sheet · 4-up A4 · Print ready</title>
+<title>Photo Sheet · A4 · print ready</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pw: 3.5cm;          /* photo footprint width  (includes border) */
-    --ph: 4.5cm;          /* photo footprint height (includes border) */
-    --bw: 0mm;            /* border width */
-    --bc: #ffffff;        /* border colour */
-    --gap: 1mm;           /* gap between photos */
+    --pw: 3.5cm;              /* photo footprint width  (includes border) */
+    --ph: 4.5cm;              /* photo footprint height (includes border) */
+    --bw: 0mm;                /* border width */
+    --bc: #f7f7f7;            /* border colour (default rgb(247,247,247)) */
+    --gap: 1mm;               /* gap between photos */
   }
 
   html, body { height: 100%; }
@@ -70,15 +70,12 @@
   }
   #photoGrid.border-outside .photo::after{ display: none; }
 
-  /* ---------------- grid: 1×4 / 2×2, 1mm gap ---------------- */
+  /* ---------------- dynamic grid ---------------- */
   #photoGrid{
     display: grid;
     gap: var(--gap);
-    grid-template-columns: var(--pw) var(--pw) var(--pw) var(--pw);
     align-content: start;
-  }
-  #photoGrid.grid-2x2{
-    grid-template-columns: var(--pw) var(--pw);
+    /* columns are set from JS: repeat(N, var(--pw)) */
   }
 
   /* ---------------- pill tabs ---------------- */
@@ -117,6 +114,17 @@
     border: 2px solid #fa520f;
     padding: 0 11px;
   }
+  .field-mini{
+    height: 34px;
+    border: 1px solid #c7c7c7;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    color: #1f1f1f;
+    outline: none;
+    text-align: center;
+  }
+  .field-mini:focus{ border-color: #fa520f; }
 
   /* ---------------- preview scaling ---------------- */
   #pageScaler{ transform-origin: top center; }
@@ -173,8 +181,6 @@
 <!-- ══════════════════════ TOP NAV ══════════════════════ -->
 <header class="no-print sticky top-0 z-30 border-b border-[#ededed] bg-white/95 backdrop-blur">
   <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
-
-    <!-- brand mark -->
     <div class="grid h-9 w-9 place-items-center rounded-lg bg-[#fa520f] text-white shadow-[0_4px_12px_rgba(250,82,15,0.35)]">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -183,35 +189,12 @@
         <path d="m21 15-5-5L5 21"/>
       </svg>
     </div>
-
     <div class="mr-auto">
       <h1 class="font-editorial text-[20px] leading-none tracking-[-0.5px] text-[#1f1f1f]">Photo Sheet</h1>
       <p class="mt-1 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">
-        4-up · A4 · print ready
+        Dynamic grid · A4 · print ready
       </p>
     </div>
-
-    <!-- actions -->
-    <button id="configBtn"
-      class="inline-flex items-center gap-1.5 rounded-lg border border-[#c7c7c7] bg-white px-3.5 py-2 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#fafafa]">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-      Sizes
-    </button>
-
-    <button id="printBtn"
-      class="inline-flex items-center gap-1.5 rounded-lg bg-[#fa520f] px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(250,82,15,0.3)] transition hover:bg-[#cc3a05]">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 9V2h12v7"/>
-        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-        <rect x="6" y="14" width="12" height="8"/>
-      </svg>
-      Print
-    </button>
   </div>
 </header>
 
@@ -220,7 +203,7 @@
 
   <!-- controls card -->
   <section class="no-print mb-5 rounded-xl border border-[#ededed] bg-white p-4 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
-    <div class="flex flex-wrap items-end gap-x-7 gap-y-4">
+    <div class="flex flex-wrap items-end gap-x-6 gap-y-4">
 
       <!-- photo size -->
       <div>
@@ -235,9 +218,31 @@
         </div>
       </div>
 
+      <!-- grid rows × cols -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Grid</p>
+        <div class="flex items-center gap-1.5">
+          <input id="rowsInput" type="number" min="1" max="12" step="1" value="1"
+                 class="field-mini w-12" aria-label="Rows" />
+          <span class="text-[13px] text-[#a8a8a8]">×</span>
+          <input id="colsInput" type="number" min="1" max="12" step="1" value="4"
+                 class="field-mini w-12" aria-label="Columns" />
+        </div>
+      </div>
+
+      <!-- gap -->
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Gap</p>
+        <div class="flex items-center gap-1.5">
+          <input id="gapInput" type="number" min="0" max="10" step="0.1" value="1"
+                 class="field-mini w-16" aria-label="Gap in millimetres" />
+          <span class="text-[11px] text-[#8a8a8a]">mm</span>
+        </div>
+      </div>
+
       <!-- border width -->
       <div>
-        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border width</p>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border</p>
         <div id="borderGroup" class="inline-flex gap-1.5">
           <button class="pill-tab active" data-val="0">None</button>
           <button class="pill-tab" data-val="0.5">0.5 mm</button>
@@ -247,7 +252,7 @@
 
       <!-- border position -->
       <div>
-        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border position</p>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Position</p>
         <div id="posGroup" class="inline-flex gap-1.5">
           <button class="pill-tab active" data-val="inside">Inside</button>
           <button class="pill-tab" data-val="outside">Outside</button>
@@ -256,28 +261,37 @@
 
       <!-- border colour -->
       <div>
-        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Border colour</p>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Colour</p>
         <label class="flex h-[34px] w-[46px] cursor-pointer items-center justify-center rounded-lg border border-[#c7c7c7] bg-white">
-          <input id="borderColor" type="color" value="#ffffff" title="Border colour"
+          <input id="borderColor" type="color" value="#f7f7f7" title="Border colour"
                  class="h-6 w-8 cursor-pointer border-0 bg-transparent p-0" />
         </label>
       </div>
 
-      <!-- layout -->
-      <div>
-        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[1px] text-[#8a8a8a]">Layout</p>
-        <div id="layoutGroup" class="inline-flex gap-1.5">
-          <button class="pill-tab active" data-val="row">1 × 4</button>
-          <button class="pill-tab" data-val="grid">2 × 2</button>
-        </div>
-      </div>
-
-      <!-- misc -->
-      <div class="ml-auto flex items-center gap-3">
-        <span class="hidden text-[11px] text-[#8a8a8a] sm:inline">1 mm gap between photos</span>
+      <!-- actions -->
+      <div class="ml-auto flex items-center gap-2">
+        <button id="configBtn"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-[#c7c7c7] bg-white px-3.5 py-2 text-[13px] font-medium text-[#1f1f1f] transition hover:bg-[#fafafa]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Sizes
+        </button>
         <button id="clearBtn"
           class="rounded-lg border border-[#c7c7c7] bg-white px-3 py-2 text-[13px] font-medium text-[#4a4a4a] transition hover:bg-[#fafafa]">
           Clear
+        </button>
+        <button id="printBtn"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-[#fa520f] px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(250,82,15,0.3)] transition hover:bg-[#cc3a05]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9V2h12v7"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Print
         </button>
       </div>
     </div>
@@ -295,16 +309,18 @@
     <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No image yet.</p>
   </div>
 
+  <!-- overflow warning -->
+  <p id="overflowWarn"
+     class="no-print mx-auto mb-4 hidden max-w-xl rounded-lg border border-[#ffd06a] bg-[#fff8e0] px-3 py-2 text-center text-[12px] text-[#cc3a05]">
+    This grid is too large for one A4 page at the current photo size — some photos will be clipped.
+    Reduce rows, columns, gap, or photo size.
+  </p>
+
   <!-- A4 preview -->
   <div id="previewWrap" class="flex justify-center overflow-hidden pb-2">
     <div id="pageScaler">
       <div id="a4page" class="a4 rounded-sm shadow-[0_12px_24px_-4px_rgba(0,0,0,0.18)]">
-        <div id="photoGrid">
-          <div class="photo"><img alt="Photo 1"></div>
-          <div class="photo"><img alt="Photo 2"></div>
-          <div class="photo"><img alt="Photo 3"></div>
-          <div class="photo"><img alt="Photo 4"></div>
-        </div>
+        <div id="photoGrid"><!-- cells generated by JS --></div>
       </div>
     </div>
   </div>
@@ -320,10 +336,9 @@
 <!-- ══════════════════════ SIGNATURE SUNSET STRIPE ══════════════════════ -->
 <div class="no-print sunset-stripe"></div>
 
-<!-- footer -->
 <footer class="no-print bg-[#fff8e0] px-6 py-6 text-center">
   <p class="text-[11px] text-[#8a8a8a]">
-    Photo Sheet · 4-up A4 · sizes are saved in this browser
+    Photo Sheet · dynamic grid · settings are saved in this browser
   </p>
 </footer>
 
@@ -387,49 +402,81 @@
   /* =========================================================
      Constants & element refs
      ========================================================= */
-  const DEFAULTS = { passport: { w: 3.5, h: 4.5 }, stamp: { w: 2, h: 2.5 } };
-  const LS_KEY   = "photoSheet.sizes.v1";
+  const DEFAULTS = {
+    sizes: { passport: { w: 3.5, h: 4.5 }, stamp: { w: 2, h: 2.5 } },
+    grid:  { rows: 1, cols: 4 },
+    gap:   1,                       // mm
+    borderColor: "#f7f7f7"          // rgb(247,247,247)
+  };
+  const LS_KEY = "photoSheet.config.v1";
 
-  const pageEl   = document.getElementById("a4page");
-  const scaler   = document.getElementById("pageScaler");
-  const wrap     = document.getElementById("previewWrap");
-  const grid     = document.getElementById("photoGrid");
-  const imgs     = Array.from(document.querySelectorAll(".photo img"));
-  const fileIn   = document.getElementById("fileInput");
-  const dropZone = document.getElementById("dropZone");
-  const info     = document.getElementById("imgInfo");
-  const modal    = document.getElementById("configModal");
+  const pageEl       = document.getElementById("a4page");
+  const scaler       = document.getElementById("pageScaler");
+  const wrap         = document.getElementById("previewWrap");
+  const grid         = document.getElementById("photoGrid");
+  const fileIn       = document.getElementById("fileInput");
+  const dropZone     = document.getElementById("dropZone");
+  const info         = document.getElementById("imgInfo");
+  const modal        = document.getElementById("configModal");
+  const warn         = document.getElementById("overflowWarn");
+  const borderColorEl= document.getElementById("borderColor");
+  const rowsIn       = document.getElementById("rowsInput");
+  const colsIn       = document.getElementById("colsInput");
+  const gapIn        = document.getElementById("gapInput");
 
   /* =========================================================
-     State
+     State (all persisted values live in `config`)
      ========================================================= */
-  let sizes     = loadSizes();
-  let mode      = "passport";     // 'passport' | 'stamp'
-  let borderW   = 0;              // mm: 0 | 0.5 | 1
-  let borderPos = "inside";       // 'inside' | 'outside'
-  let srcW = 0, srcH = 0;         // natural image size
+  let config = loadConfig();
+
+  let mode      = "passport";   // 'passport' | 'stamp'
+  let borderW   = 0;            // mm: 0 | 0.5 | 1
+  let borderPos = "inside";     // 'inside' | 'outside'
+
+  let srcW = 0, srcH = 0;       // natural image size
   let objectURL = null;
 
   /* =========================================================
-     Persistence (localStorage)
+     Persistence
      ========================================================= */
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
-  function loadSizes() {
+  function clampFloat(raw, min, max, fallback) {
+    const n = typeof raw === "number" ? raw : parseFloat(raw);
+    if (!isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(n * 10) / 10));
+  }
+  function clampInt(raw, min, max, fallback) {
+    const n = typeof raw === "number" ? raw : parseFloat(raw);
+    if (!isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(n)));
+  }
+
+  function loadConfig() {
     try {
       const raw = localStorage.getItem(LS_KEY);
       if (!raw) return clone(DEFAULTS);
-      const p = JSON.parse(raw);
-      const ok = v => typeof v === "number" && isFinite(v) && v >= 1 && v <= 10;
+      const p = JSON.parse(raw) || {};
+      const s = p.sizes || {};
       return {
-        passport: {
-          w: ok(p && p.passport && p.passport.w) ? p.passport.w : DEFAULTS.passport.w,
-          h: ok(p && p.passport && p.passport.h) ? p.passport.h : DEFAULTS.passport.h
+        sizes: {
+          passport: {
+            w: clampFloat(s.passport && s.passport.w, 1, 10, DEFAULTS.sizes.passport.w),
+            h: clampFloat(s.passport && s.passport.h, 1, 10, DEFAULTS.sizes.passport.h)
+          },
+          stamp: {
+            w: clampFloat(s.stamp && s.stamp.w, 1, 10, DEFAULTS.sizes.stamp.w),
+            h: clampFloat(s.stamp && s.stamp.h, 1, 10, DEFAULTS.sizes.stamp.h)
+          }
         },
-        stamp: {
-          w: ok(p && p.stamp && p.stamp.w) ? p.stamp.w : DEFAULTS.stamp.w,
-          h: ok(p && p.stamp && p.stamp.h) ? p.stamp.h : DEFAULTS.stamp.h
-        }
+        grid: {
+          rows: clampInt(p.grid && p.grid.rows, 1, 12, DEFAULTS.grid.rows),
+          cols: clampInt(p.grid && p.grid.cols, 1, 12, DEFAULTS.grid.cols)
+        },
+        gap: clampFloat(p.gap, 0, 10, DEFAULTS.gap),
+        borderColor: /^#[0-9a-f]{6}$/i.test(p.borderColor || "")
+          ? p.borderColor
+          : DEFAULTS.borderColor
       };
     } catch (e) {
       return clone(DEFAULTS);
@@ -437,7 +484,7 @@
   }
 
   function persist() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(sizes)); } catch (e) {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify(config)); } catch (e) {}
   }
 
   /* =========================================================
@@ -455,23 +502,35 @@
   window.addEventListener("resize", fitPreview);
 
   /* =========================================================
-     Apply sizes / border / layout
+     Apply config → CSS
      ========================================================= */
   function fmt(n) { return String(Math.round(n * 10) / 10); }
 
   function applySizes() {
-    const s = sizes[mode];
+    const s = config.sizes[mode];
     const r = document.documentElement.style;
     r.setProperty("--pw", s.w + "cm");
     r.setProperty("--ph", s.h + "cm");
 
     document.querySelectorAll("[data-dim]").forEach(function (el) {
       const k = el.dataset.dim;
-      el.textContent = fmt(sizes[k].w) + "×" + fmt(sizes[k].h);
+      el.textContent = fmt(config.sizes[k].w) + "×" + fmt(config.sizes[k].h);
     });
 
     updateQuality();
+    checkOverflow();
     fitPreview();
+  }
+
+  function applyGap() {
+    document.documentElement.style.setProperty("--gap", config.gap + "mm");
+    checkOverflow();
+    fitPreview();
+  }
+
+  function applyBorderColor() {
+    document.documentElement.style.setProperty("--bc", config.borderColor);
+    borderColorEl.value = config.borderColor;
   }
 
   function applyBorder() {
@@ -480,7 +539,49 @@
   }
 
   /* =========================================================
-     Segmented pill groups
+     Dynamic grid
+     ========================================================= */
+  function buildGrid() {
+    const rows = config.grid.rows;
+    const cols = config.grid.cols;
+    const count = rows * cols;
+
+    grid.innerHTML = "";
+    grid.style.gridTemplateColumns = "repeat(" + cols + ", var(--pw))";
+
+    for (let i = 0; i < count; i++) {
+      const cell = document.createElement("div");
+      cell.className = "photo";
+
+      const im = document.createElement("img");
+      im.alt = "Photo " + (i + 1);
+      if (objectURL) im.src = objectURL;
+
+      cell.appendChild(im);
+      grid.appendChild(cell);
+    }
+
+    checkOverflow();
+    fitPreview();
+  }
+
+  function checkOverflow() {
+    const s = config.sizes[mode];
+    const pw = s.w * 10;   // cm → mm
+    const ph = s.h * 10;
+    const { rows, cols } = config.grid;
+    const needW = cols * pw + (cols - 1) * config.gap;
+    const needH = rows * ph + (rows - 1) * config.gap;
+
+    const usableW = 200;   // 210 − 2×5mm
+    const usableH = 287;   // 297 − 2×5mm
+    const over = needW > usableW + 0.5 || needH > usableH + 0.5;
+
+    warn.classList.toggle("hidden", !over);
+  }
+
+  /* =========================================================
+     Segmented pill groups (session-only: border width + position)
      ========================================================= */
   function wireGroup(id, onPick) {
     const g = document.getElementById(id);
@@ -497,14 +598,44 @@
   wireGroup("sizeGroup",   v => { mode = v; applySizes(); });
   wireGroup("borderGroup", v => { borderW = parseFloat(v); applyBorder(); });
   wireGroup("posGroup",    v => { borderPos = v; applyBorder(); });
-  wireGroup("layoutGroup", v => {
-    grid.classList.toggle("grid-2x2", v === "grid");
-    fitPreview();
-  });
 
-  /* border colour */
-  document.getElementById("borderColor").addEventListener("input", function (e) {
-    document.documentElement.style.setProperty("--bc", e.target.value);
+  /* =========================================================
+     Toolbar inputs → persisted config
+     ========================================================= */
+  rowsIn.addEventListener("input", function () {
+    const v = clampInt(rowsIn.value, 1, 12, config.grid.rows);
+    if (v !== config.grid.rows) {
+      config.grid.rows = v;
+      persist();
+      buildGrid();
+    }
+  });
+  rowsIn.addEventListener("blur", function () { rowsIn.value = config.grid.rows; });
+
+  colsIn.addEventListener("input", function () {
+    const v = clampInt(colsIn.value, 1, 12, config.grid.cols);
+    if (v !== config.grid.cols) {
+      config.grid.cols = v;
+      persist();
+      buildGrid();
+    }
+  });
+  colsIn.addEventListener("blur", function () { colsIn.value = config.grid.cols; });
+
+  gapIn.addEventListener("input", function () {
+    const v = clampFloat(gapIn.value, 0, 10, config.gap);
+    if (v !== config.gap) {
+      config.gap = v;
+      persist();
+      applyGap();
+    }
+  });
+  gapIn.addEventListener("blur", function () { gapIn.value = config.gap; });
+
+  borderColorEl.addEventListener("input", function (e) {
+    config.borderColor = e.target.value;
+    document.documentElement.style.setProperty("--bc", config.borderColor);
+    persist();
   });
 
   /* =========================================================
@@ -515,7 +646,6 @@
 
     const url = URL.createObjectURL(file);
 
-    // probe natural size for the DPI quality hint
     const probe = new Image();
     probe.onload = function () {
       srcW = probe.naturalWidth;
@@ -527,12 +657,12 @@
     if (objectURL) URL.revokeObjectURL(objectURL);
     objectURL = url;
 
-    imgs.forEach(function (im) { im.src = url; });
+    grid.querySelectorAll("img").forEach(function (im) { im.src = url; });
     fileIn.value = "";
   }
 
   function clearImage() {
-    imgs.forEach(function (im) { im.removeAttribute("src"); });
+    grid.querySelectorAll("img").forEach(function (im) { im.removeAttribute("src"); });
     if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
     srcW = 0; srcH = 0;
     info.textContent = "No image yet.";
@@ -544,8 +674,8 @@
       info.textContent = "No image yet.";
       return;
     }
-    const s = sizes[mode];
-    const needW = Math.ceil(s.w / 2.54 * 300);   // px needed @300 DPI
+    const s = config.sizes[mode];
+    const needW = Math.ceil(s.w / 2.54 * 300);
     const needH = Math.ceil(s.h / 2.54 * 300);
     const ok = srcW >= needW && srcH >= needH;
 
@@ -604,7 +734,6 @@
     if (f) handleFile(f);
   });
 
-  // never let a stray drop navigate away
   window.addEventListener("dragover", function (e) { e.preventDefault(); });
   window.addEventListener("drop",     function (e) { e.preventDefault(); });
 
@@ -615,7 +744,7 @@
   document.getElementById("printBtn").addEventListener("click", function () { window.print(); });
 
   /* =========================================================
-     Config modal
+     Config modal (sizes)
      ========================================================= */
   const cfg = {
     pw: document.getElementById("cfgPassportW"),
@@ -625,10 +754,10 @@
   };
 
   function openModal() {
-    cfg.pw.value = fmt(sizes.passport.w);
-    cfg.ph.value = fmt(sizes.passport.h);
-    cfg.sw.value = fmt(sizes.stamp.w);
-    cfg.sh.value = fmt(sizes.stamp.h);
+    cfg.pw.value = fmt(config.sizes.passport.w);
+    cfg.ph.value = fmt(config.sizes.passport.h);
+    cfg.sw.value = fmt(config.sizes.stamp.w);
+    cfg.sh.value = fmt(config.sizes.stamp.h);
     modal.classList.remove("hidden");
     document.body.classList.add("overflow-hidden");
     setTimeout(function () { cfg.pw.focus(); }, 30);
@@ -640,23 +769,17 @@
     fitPreview();
   }
 
-  function readNum(el, fallback) {
-    const v = parseFloat(el.value);
-    if (!isFinite(v)) return fallback;
-    return Math.min(10, Math.max(1, Math.round(v * 10) / 10));
-  }
-
   document.getElementById("configBtn").addEventListener("click", openModal);
 
   document.getElementById("cfgSave").addEventListener("click", function () {
-    sizes = {
+    config.sizes = {
       passport: {
-        w: readNum(cfg.pw, DEFAULTS.passport.w),
-        h: readNum(cfg.ph, DEFAULTS.passport.h)
+        w: clampFloat(cfg.pw.value, 1, 10, DEFAULTS.sizes.passport.w),
+        h: clampFloat(cfg.ph.value, 1, 10, DEFAULTS.sizes.passport.h)
       },
       stamp: {
-        w: readNum(cfg.sw, DEFAULTS.stamp.w),
-        h: readNum(cfg.sh, DEFAULTS.stamp.h)
+        w: clampFloat(cfg.sw.value, 1, 10, DEFAULTS.sizes.stamp.w),
+        h: clampFloat(cfg.sh.value, 1, 10, DEFAULTS.sizes.stamp.h)
       }
     };
     persist();
@@ -665,10 +788,10 @@
   });
 
   document.getElementById("cfgReset").addEventListener("click", function () {
-    cfg.pw.value = fmt(DEFAULTS.passport.w);
-    cfg.ph.value = fmt(DEFAULTS.passport.h);
-    cfg.sw.value = fmt(DEFAULTS.stamp.w);
-    cfg.sh.value = fmt(DEFAULTS.stamp.h);
+    cfg.pw.value = fmt(DEFAULTS.sizes.passport.w);
+    cfg.ph.value = fmt(DEFAULTS.sizes.passport.h);
+    cfg.sw.value = fmt(DEFAULTS.sizes.stamp.w);
+    cfg.sh.value = fmt(DEFAULTS.sizes.stamp.h);
   });
 
   modal.querySelectorAll("[data-close]").forEach(function (el) {
@@ -682,8 +805,15 @@
   /* =========================================================
      Boot
      ========================================================= */
+  rowsIn.value = config.grid.rows;
+  colsIn.value = config.grid.cols;
+  gapIn.value  = config.gap;
+
   applyBorder();
+  applyBorderColor();
+  applyGap();
   applySizes();
+  buildGrid();
   updateQuality();
   requestAnimationFrame(fitPreview);
 
