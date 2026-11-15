@@ -306,7 +306,7 @@
       <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">V</kbd>
       to paste &nbsp;·&nbsp; drop an image &nbsp;·&nbsp; or click to browse
     </p>
-    <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No image yet.</p>
+    <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No image yet — showing placeholder.</p>
   </div>
 
   <!-- overflow warning -->
@@ -402,6 +402,8 @@
   /* =========================================================
      Constants & element refs
      ========================================================= */
+  const PLACEHOLDER_URL = "https://placehold.co/129x166?text=No+Photo+Added";
+
   const DEFAULTS = {
     sizes: { passport: { w: 3.5, h: 4.5 }, stamp: { w: 2, h: 2.5 } },
     grid:  { rows: 1, cols: 4 },
@@ -425,7 +427,7 @@
   const gapIn        = document.getElementById("gapInput");
 
   /* =========================================================
-     State (all persisted values live in `config`)
+     State
      ========================================================= */
   let config = loadConfig();
 
@@ -434,7 +436,7 @@
   let borderPos = "inside";     // 'inside' | 'outside'
 
   let srcW = 0, srcH = 0;       // natural image size
-  let objectURL = null;
+  let objectURL = null;         // real uploaded image (null → placeholder)
 
   /* =========================================================
      Persistence
@@ -545,6 +547,7 @@
     const rows = config.grid.rows;
     const cols = config.grid.cols;
     const count = rows * cols;
+    const src = objectURL || PLACEHOLDER_URL;
 
     grid.innerHTML = "";
     grid.style.gridTemplateColumns = "repeat(" + cols + ", var(--pw))";
@@ -555,7 +558,7 @@
 
       const im = document.createElement("img");
       im.alt = "Photo " + (i + 1);
-      if (objectURL) im.src = objectURL;
+      im.src = src;
 
       cell.appendChild(im);
       grid.appendChild(cell);
@@ -662,16 +665,16 @@
   }
 
   function clearImage() {
-    grid.querySelectorAll("img").forEach(function (im) { im.removeAttribute("src"); });
     if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
     srcW = 0; srcH = 0;
-    info.textContent = "No image yet.";
+    grid.querySelectorAll("img").forEach(function (im) { im.src = PLACEHOLDER_URL; });
+    info.textContent = "No image yet — showing placeholder.";
     fileIn.value = "";
   }
 
   function updateQuality() {
     if (!srcW || !srcH) {
-      info.textContent = "No image yet.";
+      info.textContent = "No image yet — showing placeholder.";
       return;
     }
     const s = config.sizes[mode];
@@ -813,7 +816,7 @@
   applyBorderColor();
   applyGap();
   applySizes();
-  buildGrid();
+  buildGrid();          // ← builds cells with PLACEHOLDER_URL by default
   updateQuality();
   requestAnimationFrame(fitPreview);
 
