@@ -48,6 +48,7 @@
     flex: none;
     background: #eef2f7;
     box-sizing: border-box;
+    cursor: pointer;
   }
   .photo img{
     width: 100%;
@@ -69,6 +70,52 @@
     background: var(--bc);
   }
   #photoGrid.border-outside .photo::after{ display: none; }
+
+  /* ---------------- per-cell hover UI ---------------- */
+  .cell-overlay{
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    background: rgba(31,31,31,0.45);
+    color: #fff;
+    opacity: 0;
+    transition: opacity .15s ease;
+    pointer-events: none;
+  }
+  .photo:hover .cell-overlay{ opacity: 1; }
+
+  .cell-remove{
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    z-index: 3;
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: none;
+    border-radius: 9999px;
+    background: rgba(31,31,31,0.75);
+    color: #fff;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .15s ease, background .15s ease;
+  }
+  .photo:hover .cell-remove{ opacity: 1; }
+  .cell-remove:hover{ background: #fa520f; }
+
+  .photo.drag-over::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    background: rgba(250,82,15,0.14);
+    box-shadow: inset 0 0 0 2px #fa520f;
+    pointer-events: none;
+  }
 
   /* ---------------- dynamic grid ---------------- */
   #photoGrid{
@@ -172,6 +219,12 @@
       break-inside: avoid;
       page-break-inside: avoid;
     }
+
+    /* editor chrome must never print */
+    .cell-overlay,
+    .cell-remove,
+    .photo::before{ display: none !important; }
+    #photoGrid .photo{ cursor: default; }
   }
 </style>
 </head>
@@ -281,7 +334,7 @@
         </button>
         <button id="clearBtn"
           class="rounded-lg border border-[#c7c7c7] bg-white px-3 py-2 text-[13px] font-medium text-[#4a4a4a] transition hover:bg-[#fafafa]">
-          Clear
+          Clear all
         </button>
         <button id="printBtn"
           class="inline-flex items-center gap-1.5 rounded-lg bg-[#fa520f] px-4 py-2 text-[13px] font-medium text-white shadow-[0_4px_12px_rgba(250,82,15,0.3)] transition hover:bg-[#cc3a05]">
@@ -297,16 +350,17 @@
     </div>
   </section>
 
-  <!-- paste / drop zone -->
+  <!-- paste / drop zone (fills the whole grid) -->
   <div id="dropZone"
        class="no-print mb-5 cursor-pointer rounded-xl border border-dashed border-[#e6d5a8] bg-[#fff8e0] px-4 py-3 text-center transition hover:border-[#fa520f] hover:bg-[#fffaeb]">
     <p class="text-[13px] text-[#3d3d3d]">
-      <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">Ctrl</kbd>
-      +
+      <b class="text-[#1f1f1f]">Click any cell</b> to give it its own photo &nbsp;·&nbsp;
+      or paste /
+      <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">Ctrl</kbd>+
       <kbd class="rounded border border-[#e6d5a8] bg-white px-1.5 py-0.5 font-mono text-[10px] text-[#1f1f1f]">V</kbd>
-      to paste &nbsp;·&nbsp; drop an image &nbsp;·&nbsp; or click to browse
+      / drop here to fill every cell
     </p>
-    <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No image yet — showing placeholder.</p>
+    <p id="imgInfo" class="mt-1 text-[11px] text-[#8a8a8a]">No photo yet — showing placeholder.</p>
   </div>
 
   <!-- overflow warning -->
@@ -404,6 +458,17 @@
      ========================================================= */
   const PLACEHOLDER_URL = "https://placehold.co/129x166?text=No+Photo+Added";
 
+  const ICON_UPLOAD =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>' +
+    '<path d="m21 15-5-5L5 21"/></svg>';
+
+  const ICON_X =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" ' +
+    'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M18 6 6 18M6 6l12 12"/></svg>';
+
   const DEFAULTS = {
     sizes: { passport: { w: 3.5, h: 4.5 }, stamp: { w: 2, h: 2.5 } },
     grid:  { rows: 1, cols: 4 },
@@ -435,8 +500,14 @@
   let borderW   = 0;            // mm: 0 | 0.5 | 1
   let borderPos = "inside";     // 'inside' | 'outside'
 
-  let srcW = 0, srcH = 0;       // natural image size
-  let objectURL = null;         // real uploaded image (null → placeholder)
+  /* ---- per-cell photo store ---------------------------------
+     cellUrls[i]  : object URL for cell i, or null → placeholder
+     lastProbe    : { w, h } of the most recently added image
+     uploadTarget : 'all' | cell index — where the file dialog sends
+     ----------------------------------------------------------- */
+  let cellUrls     = [];
+  let lastProbe    = null;
+  let uploadTarget = "all";
 
   /* =========================================================
      Persistence
@@ -519,7 +590,7 @@
       el.textContent = fmt(config.sizes[k].w) + "×" + fmt(config.sizes[k].h);
     });
 
-    updateQuality();
+    updateInfo();
     checkOverflow();
     fitPreview();
   }
@@ -541,13 +612,20 @@
   }
 
   /* =========================================================
-     Dynamic grid
+     Dynamic grid — one independent photo per cell
      ========================================================= */
   function buildGrid() {
     const rows = config.grid.rows;
     const cols = config.grid.cols;
     const count = rows * cols;
-    const src = objectURL || PLACEHOLDER_URL;
+
+    /* keep existing per-cell photos where the index still exists,
+       release the ones that no longer fit */
+    for (let i = count; i < cellUrls.length; i++) {
+      if (cellUrls[i]) URL.revokeObjectURL(cellUrls[i]);
+    }
+    cellUrls.length = Math.min(cellUrls.length, count);
+    while (cellUrls.length < count) cellUrls.push(null);
 
     grid.innerHTML = "";
     grid.style.gridTemplateColumns = "repeat(" + cols + ", var(--pw))";
@@ -555,24 +633,57 @@
     for (let i = 0; i < count; i++) {
       const cell = document.createElement("div");
       cell.className = "photo";
-
-      const im = document.createElement("img");
-      im.alt = "Photo " + (i + 1);
-      im.src = src;
-
-      cell.appendChild(im);
+      renderCell(i, cell);
       grid.appendChild(cell);
     }
 
     checkOverflow();
+    updateInfo();
     fitPreview();
+  }
+
+  /* paint a single cell from the store */
+  function renderCell(i, cell) {
+    cell.innerHTML = "";
+    cell.dataset.index = String(i);
+    cell.title = cellUrls[i] ? "Click to replace this photo" : "Click to add a photo";
+
+    const im = document.createElement("img");
+    im.alt = "Photo " + (i + 1);
+    im.src = cellUrls[i] || PLACEHOLDER_URL;
+    cell.appendChild(im);
+
+    /* hover hint */
+    const ov = document.createElement("div");
+    ov.className = "cell-overlay";
+    ov.innerHTML = ICON_UPLOAD;
+    cell.appendChild(ov);
+
+    cell.classList.toggle("has-img", !!cellUrls[i]);
+
+    /* per-cell remove */
+    if (cellUrls[i]) {
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "cell-remove";
+      rm.title = "Remove this photo";
+      rm.setAttribute("aria-label", "Remove photo " + (i + 1));
+      rm.innerHTML = ICON_X;
+      rm.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        clearCell(i);
+      });
+      cell.appendChild(rm);
+    }
   }
 
   function checkOverflow() {
     const s = config.sizes[mode];
     const pw = s.w * 10;   // cm → mm
     const ph = s.h * 10;
-    const { rows, cols } = config.grid;
+    const rows = config.grid.rows;
+    const cols = config.grid.cols;
     const needW = cols * pw + (cols - 1) * config.gap;
     const needH = rows * ph + (rows - 1) * config.gap;
 
@@ -581,6 +692,115 @@
     const over = needW > usableW + 0.5 || needH > usableH + 0.5;
 
     warn.classList.toggle("hidden", !over);
+  }
+
+  /* =========================================================
+     Image helpers
+     ========================================================= */
+  function isImage(file) {
+    return !!file && typeof file.type === "string" && file.type.indexOf("image/") === 0;
+  }
+
+  /* read natural size without keeping the probe URL around */
+  function probeImage(file, cb) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      cb(img.naturalWidth, img.naturalHeight);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+
+  /* set one cell to one file */
+  function setCellImage(i, file) {
+    if (!isImage(file) || i < 0 || i >= cellUrls.length) return;
+
+    const url = URL.createObjectURL(file);
+    if (cellUrls[i]) URL.revokeObjectURL(cellUrls[i]);
+    cellUrls[i] = url;
+
+    const cell = grid.querySelector('.photo[data-index="' + i + '"]');
+    if (cell) renderCell(i, cell);
+
+    probeImage(file, function (w, h) {
+      lastProbe = { w: w, h: h };
+      updateInfo();
+    });
+    updateInfo();
+  }
+
+  /* set every cell to the same file (paste / drop-zone / browse) */
+  function fillAllCells(file) {
+    if (!isImage(file)) return;
+
+    for (let i = 0; i < cellUrls.length; i++) {
+      if (cellUrls[i]) URL.revokeObjectURL(cellUrls[i]);
+      cellUrls[i] = URL.createObjectURL(file);
+    }
+    grid.querySelectorAll(".photo").forEach(function (cell) {
+      renderCell(parseInt(cell.dataset.index, 10), cell);
+    });
+
+    probeImage(file, function (w, h) {
+      lastProbe = { w: w, h: h };
+      updateInfo();
+    });
+    updateInfo();
+  }
+
+  /* empty a single cell */
+  function clearCell(i) {
+    if (cellUrls[i]) { URL.revokeObjectURL(cellUrls[i]); cellUrls[i] = null; }
+    const cell = grid.querySelector('.photo[data-index="' + i + '"]');
+    if (cell) renderCell(i, cell);
+    updateInfo();
+  }
+
+  /* empty every cell */
+  function clearImage() {
+    for (let i = 0; i < cellUrls.length; i++) {
+      if (cellUrls[i]) { URL.revokeObjectURL(cellUrls[i]); cellUrls[i] = null; }
+    }
+    grid.querySelectorAll(".photo").forEach(function (cell) {
+      renderCell(parseInt(cell.dataset.index, 10), cell);
+    });
+    lastProbe = null;
+    fileIn.value = "";
+    updateInfo();
+  }
+
+  /* status line */
+  function updateInfo() {
+    const total = cellUrls.length;
+    let filled = 0;
+    for (let i = 0; i < total; i++) if (cellUrls[i]) filled++;
+
+    if (filled === 0) {
+      info.innerHTML = "No photo yet — click a cell, paste, or drop an image.";
+      return;
+    }
+
+    let html =
+      '<span style="color:#6a6a6a">' + filled + " of " + total +
+      (total === 1 ? " cell" : " cells") + " filled</span>";
+
+    if (lastProbe) {
+      const s = config.sizes[mode];
+      const needW = Math.ceil(s.w / 2.54 * 300);
+      const needH = Math.ceil(s.h / 2.54 * 300);
+      const ok = lastProbe.w >= needW && lastProbe.h >= needH;
+
+      html +=
+        ' <span style="color:#a8a8a8">·</span> ' +
+        '<span style="color:#6a6a6a">last ' + lastProbe.w + " × " + lastProbe.h + " px</span>" +
+        ' <span style="color:#a8a8a8">·</span> ' +
+        (ok
+          ? '<span style="color:#1f1f1f">good for 300 DPI print</span>'
+          : '<span style="color:#cc3a05">low for 300 DPI — may look soft</span>');
+    }
+    info.innerHTML = html;
   }
 
   /* =========================================================
@@ -642,84 +862,82 @@
   });
 
   /* =========================================================
-     Image loading: paste · drop · browse
+     Per-cell upload — click a cell
      ========================================================= */
-  function handleFile(file) {
-    if (!file || file.type.indexOf("image/") !== 0) return;
+  grid.addEventListener("click", function (e) {
+    const cell = e.target.closest(".photo");
+    if (!cell) return;
+    uploadTarget = parseInt(cell.dataset.index, 10);
+    fileIn.click();
+  });
 
-    const url = URL.createObjectURL(file);
+  /* whole-grid upload — click the drop zone */
+  dropZone.addEventListener("click", function () {
+    uploadTarget = "all";
+    fileIn.click();
+  });
 
-    const probe = new Image();
-    probe.onload = function () {
-      srcW = probe.naturalWidth;
-      srcH = probe.naturalHeight;
-      updateQuality();
-    };
-    probe.src = url;
-
-    if (objectURL) URL.revokeObjectURL(objectURL);
-    objectURL = url;
-
-    grid.querySelectorAll("img").forEach(function (im) { im.src = url; });
-    fileIn.value = "";
-  }
-
-  function clearImage() {
-    if (objectURL) { URL.revokeObjectURL(objectURL); objectURL = null; }
-    srcW = 0; srcH = 0;
-    grid.querySelectorAll("img").forEach(function (im) { im.src = PLACEHOLDER_URL; });
-    info.textContent = "No image yet — showing placeholder.";
-    fileIn.value = "";
-  }
-
-  function updateQuality() {
-    if (!srcW || !srcH) {
-      info.textContent = "No image yet — showing placeholder.";
-      return;
+  fileIn.addEventListener("change", function (e) {
+    const f = e.target.files && e.target.files[0];
+    if (f) {
+      if (uploadTarget === "all") fillAllCells(f);
+      else setCellImage(uploadTarget, f);
     }
-    const s = config.sizes[mode];
-    const needW = Math.ceil(s.w / 2.54 * 300);
-    const needH = Math.ceil(s.h / 2.54 * 300);
-    const ok = srcW >= needW && srcH >= needH;
+    fileIn.value = "";
+    uploadTarget = "all";
+  });
 
-    info.innerHTML =
-      '<span style="color:#6a6a6a">Source ' + srcW + " × " + srcH + " px</span>" +
-      ' <span style="color:#a8a8a8">·</span> ' +
-      (ok
-        ? '<span style="color:#1f1f1f">good for 300 DPI print</span>'
-        : '<span style="color:#cc3a05">low for 300 DPI — may look soft</span>');
-  }
-
-  /* paste (Ctrl / Cmd + V) */
-  document.addEventListener("paste", function (e) {
-    const dt = e.clipboardData;
-    if (!dt) return;
+  /* =========================================================
+     Drag & drop — per cell, plus whole-grid
+     ========================================================= */
+  function readImageFromDataTransfer(dt) {
+    if (!dt) return null;
 
     if (dt.items) {
       for (let i = 0; i < dt.items.length; i++) {
         const it = dt.items[i];
         if (it.kind === "file" && it.type.indexOf("image/") === 0) {
           const f = it.getAsFile();
-          if (f) { e.preventDefault(); handleFile(f); return; }
+          if (f) return f;
         }
       }
     }
-    if (dt.files && dt.files.length) {
+    if (dt.files) {
       for (let i = 0; i < dt.files.length; i++) {
-        if (dt.files[i].type.indexOf("image/") === 0) {
-          e.preventDefault(); handleFile(dt.files[i]); return;
-        }
+        if (dt.files[i].type.indexOf("image/") === 0) return dt.files[i];
       }
     }
+    return null;
+  }
+
+  grid.addEventListener("dragover", function (e) {
+    const cell = e.target.closest(".photo");
+    if (!cell) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    grid.querySelectorAll(".photo.drag-over").forEach(function (c) {
+      if (c !== cell) c.classList.remove("drag-over");
+    });
+    cell.classList.add("drag-over");
   });
 
-  /* browse */
-  dropZone.addEventListener("click", function () { fileIn.click(); });
-  fileIn.addEventListener("change", function (e) {
-    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  grid.addEventListener("dragleave", function (e) {
+    const cell = e.target.closest(".photo");
+    if (cell) cell.classList.remove("drag-over");
   });
 
-  /* drag & drop */
+  grid.addEventListener("drop", function (e) {
+    const cell = e.target.closest(".photo");
+    if (!cell) return;
+    e.preventDefault();
+    e.stopPropagation();          /* don't let the window handler swallow it */
+    cell.classList.remove("drag-over");
+
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) setCellImage(parseInt(cell.dataset.index, 10), f);
+  });
+
+  /* drop zone → fill the entire grid */
   ["dragenter", "dragover"].forEach(function (ev) {
     dropZone.addEventListener(ev, function (e) {
       e.preventDefault();
@@ -734,11 +952,26 @@
   });
   dropZone.addEventListener("drop", function (e) {
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) handleFile(f);
+    if (f) fillAllCells(f);
   });
 
   window.addEventListener("dragover", function (e) { e.preventDefault(); });
-  window.addEventListener("drop",     function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) {
+    e.preventDefault();
+    grid.querySelectorAll(".photo.drag-over").forEach(function (c) {
+      c.classList.remove("drag-over");
+    });
+  });
+
+  /* =========================================================
+     Paste → fills the whole grid (use cell clicks for singles)
+     ========================================================= */
+  document.addEventListener("paste", function (e) {
+    const f = readImageFromDataTransfer(e.clipboardData);
+    if (!f) return;
+    e.preventDefault();
+    fillAllCells(f);
+  });
 
   /* =========================================================
      Clear / Print
@@ -816,8 +1049,8 @@
   applyBorderColor();
   applyGap();
   applySizes();
-  buildGrid();          // ← builds cells with PLACEHOLDER_URL by default
-  updateQuality();
+  buildGrid();          // ← builds empty cells with PLACEHOLDER_URL
+  updateInfo();
   requestAnimationFrame(fitPreview);
 
 })();
